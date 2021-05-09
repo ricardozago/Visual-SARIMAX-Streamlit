@@ -7,12 +7,20 @@ import statsmodels.api as sm
 import statsmodels.tsa.stattools as ts
 from statsmodels.tsa.stattools import acf, pacf
 from statsmodels.tsa.arima.model import ARIMA
+from sklearn.metrics import mean_absolute_percentage_error
+from sklearn.metrics import mean_absolute_error
 import plotly.graph_objects as go
 
 st.set_page_config(layout="wide")
 
 def main():
+    
     df = None
+
+    # Para facilitar o debug
+    # df = pd.read_csv("AirPassengers.csv")
+    # df["DATA"] = pd.to_datetime(df["DATA"])
+
     st.title("Bem vindo a ferramenta de séries temporais ARIMA")
     st.markdown('''
     Inicialmente temos que importar um dataset para realização da modelagem:  
@@ -49,12 +57,15 @@ def main():
         st.write("A técnica ARIMA (AutoRegressive Integrated Moving Average) utiliza os pontos \
             anteriores de uma série temporal para realizar a predição dos pontos seguintes.")
 
-        y = df[nome_qty]
-
+        # y = df[nome_qty]
+        y = df.set_index(nome_data)
         tests_adf_autocorr(y, 'Testes estatísticos para a série sem diferenciação')
 
-        par_ARIMA = dict()
 
+        ##################################################
+        # Parâmetros SARIMA
+        ##################################################
+        par_ARIMA = dict()
         st.markdown('''
         **Escolha os parâmetros do modelo:**  
         **Não sazonais:**
@@ -90,6 +101,21 @@ def main():
             param_models = st.empty()
             param_models_text(param_models, par_ARIMA)
 
+            ##################################################
+            # Separação entre treinamento e teste
+            ##################################################
+
+            test_size_input = st.number_input('Tamanho do conjunto de treinamento (Pode ser 0, se menor que 1, será considerado um percentual):', min_value=0.0, max_value=10000.0, value=0.0, step=0.01)
+            if test_size_input > 0 and test_size_input < 1:
+                train_size = int(y.shape[0] * (1-test_size_input))
+                y_train = y[:train_size]
+                y_test = y[train_size:]
+            elif test_size_input >= 1:
+                y_train = y[:y.shape[0] - int(test_size_input)]
+                y_test = y[y.shape[0] - int(test_size_input):]
+            else:
+                y_train = y
+                y_test = None
 
             ##################################################
             # auto.arima
@@ -101,9 +127,9 @@ def main():
 
             if st.button('Estimar com auto.arima'):
                 if par_ARIMA["n"] > 0:
-                    model_auto_arima = pm.auto_arima(y, seasonal=True, m=par_ARIMA["n"])
+                    model_auto_arima = pm.auto_arima(y_train, seasonal=True, m=par_ARIMA["n"], with_intercept = False, trend = 'n')
                 else:
-                    model_auto_arima = pm.auto_arima(y, seasonal=False)
+                    model_auto_arima = pm.auto_arima(y_train, seasonal=False, with_intercept = False, trend = 'n')
                 par_ARIMA["p"] = model_auto_arima.get_params()["order"][0]
                 par_ARIMA["d"] = model_auto_arima.get_params()["order"][1]
                 par_ARIMA["q"] = model_auto_arima.get_params()["order"][2]
@@ -130,16 +156,15 @@ def main():
             # Refaz os testes ADF e ACF/PACF caso exista diferenciação
             ##################################################
             if par_ARIMA["d"] > 0:
-                tests_adf_autocorr(y.diff(periods=par_ARIMA["d"])[par_ARIMA["d"]:], 'Testes estatísticos para a série com d = {}'.format(par_ARIMA["d"]))
-
+                tests_adf_autocorr(y_train.diff(periods=par_ARIMA["d"])[par_ARIMA["d"]:], 'Testes estatísticos para a série com d = {}'.format(par_ARIMA["d"]))
 
             ##################################################
             # Treina modelo
             ##################################################
-            model = ARIMA(df.set_index("DATA"), order=(par_ARIMA["p"], par_ARIMA["d"], par_ARIMA["q"]), 
+            model = ARIMA(y_train, order=(par_ARIMA["p"], par_ARIMA["d"], par_ARIMA["q"]), 
                         seasonal_order=(par_ARIMA["P"], par_ARIMA["D"], par_ARIMA["Q"], par_ARIMA["n"]), trend = par_ARIMA["trend"])
             model_fit = model.fit()
-            y_pred = model_fit.forecast(steps=60)
+            y_pred = model_fit.forecast(steps=y.shape[0])
             
             model_summary = st.beta_expander('Veja os parâmetros do modelo:')
             with model_summary:
@@ -148,8 +173,27 @@ def main():
             ##################################################
             # Plota Forecast
             ##################################################
-            fig_forecast = plot_grafico_projecao(df, y_pred.reset_index(), nome_data, nome_qty)
+            fig_forecast = plot_grafico_projecao(y_train, y_test, y_pred, nome_data, nome_qty)
             st.plotly_chart(fig_forecast)
+
+            ##################################################
+            # Métricas
+            ##################################################
+            
+            if y_test is not None:
+                metricas_analise = st.beta_expander('Métricas:')
+                with metricas_analise:
+                    y_pred_metrics= y_pred[:y_test.shape[0]]
+                    metric_MAPE = mean_absolute_percentage_error(y_test, y_pred_metrics)
+                    metric_RMSE = np.sqrt(mean_absolute_error(y_test, y_pred_metrics))
+                    st.markdown(f'''
+                    **Métricas:**  
+                    
+                    | Métrica  | Valor |
+                    |----------|--------|
+                    | MAPE     | {metric_MAPE:.5f} |
+                    | RMSE     | {metric_RMSE:.5f} |  
+                    ''')
 
             ##################################################
             # Análise dos resíduos
@@ -179,33 +223,6 @@ def main():
                 ''' + text_result_lb)
 
 
-
-
-def plot_grafico_projecao(X_train, X_pred, nome_data, nome_qty):
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=list(X_train[nome_data]), y=list(X_train[nome_qty]), name = "Observações"))
-    fig.add_trace(go.Scatter(x=X_pred["index"], y=X_pred["predicted_mean"], name = "Projeção"))
-    fig.update_layout()
-
-    fig.update_layout(
-        title_text="Gráfico Observações e Projeção",
-        width=1200, height=400,
-        xaxis=dict(
-            rangeselector=dict(
-                buttons=list([
-                    dict(count=1, label="1m",  step="month", stepmode="backward"),
-                    dict(count=6, label="6m",  step="month", stepmode="backward"),
-                    dict(count=1, label="YTD", step="year",  stepmode="todate"),
-                    dict(count=1, label="1y",  step="year",  stepmode="backward"),
-                    dict(step="all")
-                ])
-            ),
-            rangeslider=dict(visible=True),
-            type="date"
-        )
-    )
-    return fig
-
 def tests_adf_autocorr(y, texto):
     statistical_tests = st.beta_expander(texto)
     with statistical_tests:
@@ -228,7 +245,6 @@ def param_models_text(param_models, par_ARIMA):
     $({par_ARIMA["p"]}, {par_ARIMA["d"]}, {par_ARIMA["q"]})x({par_ARIMA["P"]}, {par_ARIMA["D"]}, {par_ARIMA["Q"]}, {par_ARIMA["n"]})$
     ''')
 
-
 def check_adfuller(y):
     est = ts.adfuller(y)[1]
     if est <= 0.05:
@@ -249,7 +265,7 @@ def plot_auto_correlation(serie, n, versao):
         go.Scatter(x=x, y=y_lower, fill='tonexty', mode='none', line_color='indigo'),
         go.Scatter(x=x, y=y_upper, fill='tonexty', mode='none', line_color='indigo')
     ])
-    fig.update_layout(showlegend=False, title=versao, xaxis_title="Lags", yaxis_title="Corr",  width=500, height=400)
+    fig.update_layout(showlegend=False, title=versao, xaxis_title="Lags", yaxis_title="Corr", width=500, height=400)
     return fig
 
 @st.cache
@@ -261,7 +277,7 @@ def plot_grafico_1(df, nome_data, nome_qty):
     fig.add_trace(go.Scatter(x=list(df[nome_data]), y=list(df[nome_qty])))
 
     # Set title
-    fig.update_layout(title_text="Gráfico da série importada")
+    fig.update_layout(title_text="Gráfico da série importada", width=1200, height=400,)
 
     # Add range slider
     fig.update_layout(
@@ -281,6 +297,37 @@ def plot_grafico_1(df, nome_data, nome_qty):
     )
     return fig
 
+def plot_grafico_projecao(X_train, X_test, X_pred, nome_data, nome_qty):
+    fig = go.Figure()
+    X_train = X_train.reset_index()
+    X_pred = X_pred.reset_index()
+    fig.add_trace(go.Scatter(x=list(X_train[nome_data]), y=list(X_train[nome_qty]), name = "Conjunto Treinamento"))
+
+    if X_test is not None:
+        X_test = X_test.reset_index()
+        fig.add_trace(go.Scatter(x=list(X_test[nome_data]), y=list(X_test[nome_qty]), name = "Conjunto Teste"))
+
+    fig.add_trace(go.Scatter(x=X_pred["index"], y=X_pred["predicted_mean"], name = "Projeção"))
+    fig.update_layout()
+
+    fig.update_layout(
+        title_text="Gráfico Observações e Projeção",
+        width=1200, height=400,
+        xaxis=dict(
+            rangeselector=dict(
+                buttons=list([
+                    dict(count=1, label="1m",  step="month", stepmode="backward"),
+                    dict(count=6, label="6m",  step="month", stepmode="backward"),
+                    dict(count=1, label="YTD", step="year",  stepmode="todate"),
+                    dict(count=1, label="1y",  step="year",  stepmode="backward"),
+                    dict(step="all")
+                ])
+            ),
+            rangeslider=dict(visible=True),
+            type="date"
+        )
+    )
+    return fig
 
 if __name__ == "__main__":
     main()
