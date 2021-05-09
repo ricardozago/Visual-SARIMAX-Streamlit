@@ -10,6 +10,7 @@ from statsmodels.tsa.arima.model import ARIMA
 from sklearn.metrics import mean_absolute_percentage_error
 from sklearn.metrics import mean_absolute_error
 import plotly.graph_objects as go
+import base64
 
 st.set_page_config(layout="wide")
 
@@ -21,7 +22,7 @@ def main():
     # df = pd.read_csv("AirPassengers.csv")
     # df["DATA"] = pd.to_datetime(df["DATA"])
 
-    st.title("Bem vindo a ferramenta de séries temporais ARIMA")
+    st.title("Bem vindo a ferramenta de séries temporais SARIMA")
     st.markdown('''
     Inicialmente temos que importar um dataset para realização da modelagem:  
     - O dataset pode ter o formato csv, xls ou xlsx;
@@ -29,10 +30,12 @@ def main():
     - Você terá a oportunidade de escolher os melhores parâmetros para o modelo posteriormente.
     ''')
 
-    nome_data = st.text_input("Nome do campo de data:", value='DATA', max_chars=256, key=None, type='default')
-    nome_qty = st.text_input("Nome do campo de quantidade de eventos:", value='QTY', max_chars=256, key=None, type='default')
+    c_nome_data, c_nome_qty = st.beta_columns(2)
 
-    uploaded_file = st.file_uploader("Selecione o arquivo ou arraste o arquivo:", type=['csv', 'xslx', 'xls'])
+    nome_data = c_nome_data.text_input("Nome do campo de data:", value='DATA', max_chars=256, key=None, type='default')
+    nome_qty = c_nome_qty.text_input("Nome do campo de quantidade de eventos:", value='QTY', max_chars=256, key=None, type='default')
+
+    uploaded_file = st.file_uploader("Selecione o arquivo ou arraste o arquivo:", type=['csv', 'xlsx', 'xls'], accept_multiple_files=False)
 
     if uploaded_file is not None:
         if nome_data == "":
@@ -42,7 +45,10 @@ def main():
         else:
             st.write('Importação do arquivo "' + uploaded_file.name + '" foi realizada com sucesso')
 
-            df = pd.read_csv(uploaded_file)
+            if uploaded_file.name.split(".")[-1].upper() == "CSV":
+                df = pd.read_csv(uploaded_file, sep = None)
+            elif uploaded_file.name.split(".")[-1].upper() in ("XLSX", "XLS"):
+                df = pd.read_excel(uploaded_file)
             df[nome_data] = pd.to_datetime(df[nome_data])
             # df.set_index(nome_data, inplace = True)
 
@@ -105,7 +111,8 @@ def main():
             # Separação entre treinamento e teste
             ##################################################
 
-            test_size_input = st.number_input('Tamanho do conjunto de treinamento (Pode ser 0, se menor que 1, será considerado um percentual):', min_value=0.0, max_value=10000.0, value=0.0, step=0.01)
+            test_size_input = st.number_input('Tamanho do conjunto de treinamento (Pode ser 0, se menor que 1, será considerado um percentual), o padrão é utilizar 20% do dataset:', 
+                min_value=0.0, max_value=10000.0, value=np.floor(y.shape[0] * 0.2), step=0.01)
             if test_size_input > 0 and test_size_input < 1:
                 train_size = int(y.shape[0] * (1-test_size_input))
                 y_train = y[:train_size]
@@ -164,11 +171,22 @@ def main():
             model = ARIMA(y_train, order=(par_ARIMA["p"], par_ARIMA["d"], par_ARIMA["q"]), 
                         seasonal_order=(par_ARIMA["P"], par_ARIMA["D"], par_ARIMA["Q"], par_ARIMA["n"]), trend = par_ARIMA["trend"])
             model_fit = model.fit()
-            y_pred = model_fit.forecast(steps=y.shape[0])
-            
+
             model_summary = st.beta_expander('Veja os parâmetros do modelo:')
             with model_summary:
                 st.write(model_fit.summary())
+
+            ##################################################
+            # Define a quantidade de pontos da projeção e projeta
+            ##################################################
+            if y_test is not None:
+                tamanho_projecao = st.number_input('Define a quantidade de pontos a serem projetados (por padrão 50% do tamanho do dataset):', 
+                    min_value=y_test.shape[0], max_value=10000, value=int(y.shape[0] * 0.5), step=1)
+            else:
+                tamanho_projecao = st.number_input('Define a quantidade de pontos a serem projetados (por padrão 50% do tamanho do dataset):', 
+                    min_value=0, max_value=10000, value=int(y.shape[0] * 0.5), step=1)
+
+            y_pred = model_fit.forecast(steps=tamanho_projecao)
 
             ##################################################
             # Plota Forecast
@@ -221,6 +239,26 @@ def main():
                     - Hipótese nula ($H_0$): Não existe correlação serial de ordem até "p" (que é escolhido por quem está utilizando o teste);  
                     - Hipótese alternativa ($H_1$): Existe correlação serial de ao menos uma ordem até "p".  
                 ''' + text_result_lb)
+
+            ##################################################
+            # Download projeção
+            ##################################################
+            if y_test is not None:
+                df_projecao = pd.concat([y_train, y_test, y_pred], axis = 1).fillna(0).reset_index()
+                df_projecao.columns = ["Data", "Treinamento", "Teste", "Projeção"]
+            else:
+                df_projecao = pd.concat([y_train, y_pred], axis = 1).fillna(0).reset_index()
+                df_projecao.columns = ["Data", "Treinamento", "Projeção"]
+            st.markdown("Faça o download da projeção:  ")
+            st.markdown(get_table_download_link_csv(df_projecao), unsafe_allow_html=True)
+
+
+def get_table_download_link_csv(df):
+    # https://discuss.streamlit.io/t/export-and-download-dataframe-to-csv-file/9926/2
+    csv = df.to_csv(index=False).encode()
+    b64 = base64.b64encode(csv).decode()
+    href = f'<a href="data:file/csv;base64,{b64}" download="captura.csv" target="_blank">Download CSV</a>'
+    return href
 
 
 def tests_adf_autocorr(y, texto):
@@ -328,6 +366,7 @@ def plot_grafico_projecao(X_train, X_test, X_pred, nome_data, nome_qty):
         )
     )
     return fig
+
 
 if __name__ == "__main__":
     main()
