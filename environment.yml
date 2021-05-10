@@ -1,0 +1,8 @@
+name: example-environment
+
+dependencies:
+  - numpy
+  - matplotlib
+  - pandas
+  - plotly
+  - altair
