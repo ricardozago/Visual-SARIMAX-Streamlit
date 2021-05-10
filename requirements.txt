@@ -1,1 +1,4 @@
 pmdarima
+numpy
+pandas
+plotly
