@@ -1,7 +1,6 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import pmdarima as pm
 import statsmodels.api as sm
 import statsmodels.tsa.stattools as ts
@@ -67,7 +66,7 @@ def main():
 
         st.markdown('***')
 
-        st.header("Modelo ARIMA:")
+        st.header("Modelo SARIMAX:")
 
         st.write("A técnica ARIMA (AutoRegressive Integrated Moving Average) utiliza os pontos \
             anteriores de uma série temporal para realizar a predição dos pontos seguintes.")
