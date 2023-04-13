@@ -72,8 +72,8 @@ def main():
 
     st.write(
         """
-    Seleção de Arquivo (arquivos de exemplo: [Icecream](https://r-data.pmagunia.com/dataset/r-dataset-package-ecdat-icecream) e
-    [AirPassengers](https://www.rdocumentation.org/packages/datasets/versions/3.6.2/topics/AirPassengers)):
+    Seleção de Arquivo (arquivos de exemplo: [Icecream](https://www3.nd.edu/~busiforc/handouts/Data%20and%20Stories/regression/ice%20cream%20consumption/icecream.html) e
+    [AirPassengers](https://www.kaggle.com/datasets/chirag19/air-passengers)):
     """
     )
 
