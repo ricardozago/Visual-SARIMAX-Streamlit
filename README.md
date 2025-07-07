@@ -30,3 +30,17 @@ Inicialmente deve-se importar um dataset, utilizamos como exemplos os datasets:
 ![03 - Projeção e testes.png](https://github.com/ricardozago/Streamlit_SARIMAX/blob/main/Imagens/03%20-%20Proje%C3%A7%C3%A3o%20e%20testes.png)
 
 Estamos abertos a contribuições!
+
+## Instalação como biblioteca
+
+Para instalar a aplicação como uma biblioteca Python utilize:
+
+```bash
+pip install -e .
+```
+
+Depois de instalada execute o aplicativo com:
+
+```bash
+streamlit run -m visual_sarimax.app
+```

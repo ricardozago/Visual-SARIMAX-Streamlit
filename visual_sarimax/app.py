@@ -9,14 +9,14 @@ from sklearn.metrics import mean_absolute_percentage_error
 from sklearn.metrics import mean_absolute_error
 import plotly.graph_objects as go
 
-from utils import (
+from .utils import (
     set_session_state,
     download_dataframe,
     tests_adf_autocorr,
     param_models_text,
     check_adfuller,
 )
-from plots import (
+from .plots import (
     plot_auto_correlation,
     plot_grafico_1,
     plot_grafico_projecao,
@@ -84,13 +84,19 @@ def main():
         st.session_state.df = None
 
     if file_Icecream.button("Arquivo exemplo Icecream", key="Icecream"):
-        st.session_state.df = pd.read_csv("datasets/Icecream.csv")
+        from importlib import resources
+
+        data_path = resources.files(__package__) / "datasets" / "Icecream.csv"
+        st.session_state.df = pd.read_csv(data_path)
         st.session_state.is_data = False
         st.session_state.nome_data = "DATA"
         st.session_state.nome_qty = "QTY"
 
     if file_AirPassengers.button("Arquivo exemplo AirPassengers", key="AirPassengers"):
-        st.session_state.df = pd.read_csv("datasets/AirPassengers.csv")
+        from importlib import resources
+
+        data_path = resources.files(__package__) / "datasets" / "AirPassengers.csv"
+        st.session_state.df = pd.read_csv(data_path)
         st.session_state.is_data = True
         st.session_state.nome_data = "DATA"
         st.session_state.nome_qty = "QTY"

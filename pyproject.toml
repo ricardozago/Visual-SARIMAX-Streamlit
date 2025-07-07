@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "visual-sarimax"
+version = "0.1.0"
+description = "Ferramenta com interface gráfica para auxiliar o desenvolvimento de modelos SARIMAX"
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [{name = "Ricardo Zago"}]
+dependencies = [
+    "streamlit>=1.21.0",
+    "pmdarima",
+    "numpy",
+    "pandas",
+    "statsmodels",
+    "scikit-learn",
+    "plotly",
+]
+
+[tool.setuptools]
+packages = ["visual_sarimax"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"visual_sarimax" = ["datasets/*.csv"]
+
+[project.urls]
+homepage = "https://github.com/ricardozago/Visual-SARIMAX-Streamlit"
