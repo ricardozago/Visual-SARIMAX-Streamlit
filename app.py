@@ -123,13 +123,16 @@ def main():
                 )
 
     if st.session_state.df is not None:
+        st.subheader("Prévia dos dados importados")
+        st.dataframe(st.session_state.df.head(), use_container_width=True)
+
         fig = plot_grafico_1(
             st.session_state.df,
             st.session_state.nome_data,
             st.session_state.nome_qty,
             st.session_state.is_data,
         )
-        st.plotly_chart(fig)
+        st.plotly_chart(fig, use_container_width=True)
 
         st.markdown("***")
 
@@ -487,7 +490,7 @@ def main():
                 st.session_state.nome_qty,
                 st.session_state.is_data,
             )
-            st.plotly_chart(fig_forecast)
+            st.plotly_chart(fig_forecast, use_container_width=True)
 
             ##################################################
             # Métricas
@@ -528,13 +531,15 @@ def main():
                     residuos, nlags=min(int(residuos.shape[0] / 2 - 1), 25), alpha=0.05
                 )
                 c_acf_resi.plotly_chart(
-                    plot_auto_correlation(acf_resi, 25, "ACF dos resíduos")
+                    plot_auto_correlation(acf_resi, 25, "ACF dos resíduos"),
+                    use_container_width=True,
                 )
                 pacf_resi = ts.pacf(
                     residuos, nlags=min(int(residuos.shape[0] / 2 - 1), 25), alpha=0.05
                 )
                 c_pacf_resi.plotly_chart(
-                    plot_auto_correlation(pacf_resi, 25, "PACF dos resíduos")
+                    plot_auto_correlation(pacf_resi, 25, "PACF dos resíduos"),
+                    use_container_width=True,
                 )
 
                 lb_results = sm.stats.diagnostic.acorr_ljungbox(
@@ -586,17 +591,18 @@ def main():
                 )
                 df_projecao.columns = ["Data", "Treinamento", "Projeção"]
             st.markdown("Faça o download da projeção:  ")
-            st.markdown(
-                get_table_download_link_csv(df_projecao), unsafe_allow_html=True
-            )
+            download_dataframe(df_projecao)
 
 
-def get_table_download_link_csv(df):
-    # https://discuss.streamlit.io/t/export-and-download-dataframe-to-csv-file/9926/2
-    csv = df.to_csv(index=False).encode()
-    b64 = base64.b64encode(csv).decode()
-    href = f'<a href="data:file/csv;base64,{b64}" download="captura.csv" target="_blank">Download CSV</a>'
-    return href
+def download_dataframe(df, file_name="captura.csv"):
+    """Renderiza um botão para download do dataframe como CSV."""
+    csv = df.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        label="Download CSV",
+        data=csv,
+        file_name=file_name,
+        mime="text/csv",
+    )
 
 
 def tests_adf_autocorr(y, texto):
@@ -611,9 +617,13 @@ def tests_adf_autocorr(y, texto):
         st.markdown("***")
         c_acf, c_pacf = st.columns(2)
         acf = ts.acf(y, nlags=min(int(y.shape[0] / 2 - 1), 25), alpha=0.05)
-        c_acf.plotly_chart(plot_auto_correlation(acf, 25, "ACF"))
+        c_acf.plotly_chart(
+            plot_auto_correlation(acf, 25, "ACF"), use_container_width=True
+        )
         pacf = ts.pacf(y, nlags=min(int(y.shape[0] / 2 - 1), 25), alpha=0.05)
-        c_pacf.plotly_chart(plot_auto_correlation(pacf, 25, "PACF"))
+        c_pacf.plotly_chart(
+            plot_auto_correlation(pacf, 25, "PACF"), use_container_width=True
+        )
 
 
 def param_models_text(param_models, par_ARIMA):
