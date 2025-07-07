@@ -2,7 +2,7 @@
 import streamlit as st
 import statsmodels.tsa.stattools as ts
 
-from plots import plot_auto_correlation
+from .plots import plot_auto_correlation
 
 
 def set_session_state():
