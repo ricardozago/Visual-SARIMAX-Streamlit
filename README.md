@@ -1,46 +1,55 @@
-Ferramenta com interface gráfica para auxiliar o desenvolvimento de modelos SARIMAX, seguindo a metodologia de Box–Jenkins, permitindo a identificação do modelo, com funções de autocorrelação e autocorrelação parcial, estimação dos parâmetros e checagem das premissas estatísticas (teste de autocorrelação dos resíduos). Além do uso de variáveis exógenas ao modelo.
+# Visual SARIMAX
 
-Estamos muito acostumados a utilizar Jupyter notebooks para análise exploratória e desenvolvimento de modelos, mas as vezes queremos alguma solução mais simples e rápida.
+Ferramenta com interface gráfica para auxiliar o desenvolvimento de modelos SARIMAX seguindo a metodologia de Box--Jenkins. O aplicativo permite:
 
-Também existe o caso de pessoas que estão acostumadas a utilizar o Excel e ferramentas como o seu toolbox de análise de dados, mas não sabem programar. O Visual SARIMAX visa atender essas pessoas.
+- Visualização das funções de autocorrelação e autocorrelação parcial;
+- Estimação dos parâmetros do modelo e validação de hipóteses estatísticas (ADF e Ljung--Box);
+- Utilização opcional de variáveis exógenas;
+- Download das projeções geradas.
 
-Esta ferramenta utiliza as bibliotecas:
-- Streamlit;
-- Pmdarima;
-- Numpy;
-- Pandas;
-- Statsmodels;
-- Sklearn;
-- Plotly.
+A interface foi pensada para usuários que nem sempre estão familiarizados com código Python, sendo uma alternativa aos tradicionais notebooks.
 
-Inicialmente deve-se importar um dataset, utilizamos como exemplos os datasets:
-- [AirPassengers](https://www.kaggle.com/chirag19/air-passengers) para modelos SARIMA;
-- [Icecream](https://www3.nd.edu/~busiforc/handouts/Data%20and%20Stories/regression/ice%20cream%20consumption/icecream.html) para modelos com exógenas.
+## Exemplos de uso
 
-**Importando um dataset, o nome dos campos e data e do valor da série temporal é fornecido ao programa, se existir outras colunas elas serão consideradas variáveis exógenas.**
+Alguns datasets de demonstração estão disponíveis no repositório:
 
-![01 - Importação.png](https://github.com/ricardozago/Streamlit_SARIMAX/blob/main/Imagens/01%20-%20Importa%C3%A7%C3%A3o.png)
+- [AirPassengers](https://www.kaggle.com/chirag19/air-passengers)
+- [Icecream](https://www3.nd.edu/~busiforc/handouts/Data%20and%20Stories/regression/ice%20cream%20consumption/icecream.html)
 
-**Escolhendo o modelo SARIMA (é possível utilizar o auto.arima do pacote pmdarima!):**
+Para utilizá‑los selecione a opção desejada na própria aplicação ou importe um arquivo CSV/XLS(X) com as colunas de data e valor da série temporal.
 
-![02 - Parâmetros.png](https://github.com/ricardozago/Streamlit_SARIMAX/blob/main/Imagens/02%20-%20Par%C3%A2metros.png)
+![Importação](https://github.com/ricardozago/Streamlit_SARIMAX/blob/main/Imagens/01%20-%20Importa%C3%A7%C3%A3o.png)
 
-**Verificando a projeção e se os resíduos estão coerentes (conforme metodologia Box–Jenkins):**
+Após escolher os parâmetros SARIMA (ou utilizar o `auto.arima`) visualize a projeção e os testes de diagnóstico:
 
-![03 - Projeção e testes.png](https://github.com/ricardozago/Streamlit_SARIMAX/blob/main/Imagens/03%20-%20Proje%C3%A7%C3%A3o%20e%20testes.png)
+![Projeção e testes](https://github.com/ricardozago/Streamlit_SARIMAX/blob/main/Imagens/03%20-%20Proje%C3%A7%C3%A3o%20e%20testes.png)
 
-Estamos abertos a contribuições!
+## Instalação
 
-## Instalação como biblioteca
-
-Para instalar a aplicação como uma biblioteca Python utilize:
+Instale a aplicação em modo desenvolvimento com:
 
 ```bash
 pip install -e .
 ```
 
-Depois de instalada execute o aplicativo com:
+Em seguida execute o aplicativo com:
 
 ```bash
 streamlit run -m visual_sarimax.app
 ```
+
+## Desenvolvimento
+
+Clone o projeto e instale as dependências listadas em `requirements.txt`. Para rodar os testes automatizados utilize:
+
+```bash
+pytest -q
+```
+
+Contribuições são bem-vindas!
+
+---
+
+## English summary
+
+**Visual SARIMAX** is a Streamlit application that guides you through the Box--Jenkins methodology for SARIMAX models. Import a dataset, choose the model parameters (or rely on `auto.arima`) and inspect the forecast along with diagnostic tests. Run it locally with `streamlit run -m visual_sarimax.app` after installing the package in editable mode.
