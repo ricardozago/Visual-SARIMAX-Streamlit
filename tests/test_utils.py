@@ -117,3 +117,9 @@ def test_check_adfuller_non_stationary(utils_setup):
     ts.adfuller = lambda y: [None, 0.1]
     utils.check_adfuller([1, 2, 3])
     assert any('não é estacionária' in m for m in logs)
+
+
+def test_load_dataset(utils_setup):
+    utils, _, _, _, _ = utils_setup
+    df = utils.load_dataset("AirPassengers")
+    assert not df.empty

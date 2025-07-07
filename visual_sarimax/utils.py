@@ -1,6 +1,8 @@
 """Utility functions for the SARIMAX Streamlit app."""
 import streamlit as st
 import statsmodels.tsa.stattools as ts
+from pathlib import Path
+import pandas as pd
 
 from .plots import plot_auto_correlation
 
@@ -55,3 +57,9 @@ def check_adfuller(y):
         st.markdown(f"👍 A série **é estacionária** com p-valor de : {est:.4f}")
     else:
         st.markdown(f"👎 A série **não é estacionária** com p-valor de : {est:.4f}")
+
+
+def load_dataset(name: str) -> pd.DataFrame:
+    """Return one of the bundled example datasets by name."""
+    data_dir = Path(__file__).resolve().parent / "datasets"
+    return pd.read_csv(data_dir / f"{name}.csv")
