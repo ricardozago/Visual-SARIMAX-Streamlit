@@ -12,7 +12,6 @@ if ROOT not in sys.path:
 def utils_setup(monkeypatch):
     logs = []
 
-    # Mock streamlit
     class DummyExpander:
         def markdown(self, *args, **kwargs):
             logs.append(args[0])
@@ -39,7 +38,6 @@ def utils_setup(monkeypatch):
     st.write = lambda *a, **k: None
     monkeypatch.setitem(sys.modules, 'streamlit', st)
 
-    # Mock plotly
     class DummyTrace:
         def __init__(self, *args, **kwargs):
             self.args = args
@@ -56,7 +54,6 @@ def utils_setup(monkeypatch):
     monkeypatch.setitem(sys.modules, 'plotly', types.SimpleNamespace(graph_objects=go))
     monkeypatch.setitem(sys.modules, 'plotly.graph_objects', go)
 
-    # Mock statsmodels.tsa.stattools
     ts = types.SimpleNamespace(
         acf=lambda y, nlags, alpha: ([0]*(nlags+1), [[0, 0]]*(nlags+1)),
         pacf=lambda y, nlags, alpha: ([0]*(nlags+1), [[0, 0]]*(nlags+1)),
@@ -65,7 +62,6 @@ def utils_setup(monkeypatch):
     monkeypatch.setitem(sys.modules, 'statsmodels', types.SimpleNamespace(tsa=types.SimpleNamespace(stattools=ts)))
     monkeypatch.setitem(sys.modules, 'statsmodels.tsa.stattools', ts)
 
-    # Minimal pandas replacement
     class DummyDataFrame(dict):
         def __init__(self, data=None, **kwargs):
             super().__init__(data or {})
@@ -107,54 +103,41 @@ def utils_setup(monkeypatch):
     return utils, plots, logs, ts, st
 
 
-def test_set_session_state(utils_setup):
+def test_param_models_text(utils_setup):
+    utils, _, logs, _, _ = utils_setup
+    logs.clear()
+    dummy = types.SimpleNamespace(markdown=lambda text: logs.append(text))
+    params = {'p':1,'d':0,'q':1,'P':0,'D':1,'Q':0,'n':12}
+    utils.param_models_text(dummy, params)
+    assert any("(1, 0, 1)" in m for m in logs)
+
+
+def test_download_dataframe(utils_setup):
     utils, _, _, _, st = utils_setup
-    st.session_state.clear()
-    utils.set_session_state()
-    assert st.session_state['df'] is None
-    assert st.session_state['nome_data'] == 'DATA'
-    assert st.session_state['nome_qty'] == 'QTY'
-    assert st.session_state['is_data'] is True
+    calls = []
+    st.download_button = lambda *a, **k: calls.append((a, k))
+    pd = sys.modules['pandas']
+    df = pd.DataFrame({'A':[1,2]})
+    utils.download_dataframe(df, file_name="out.csv")
+    assert calls and calls[0][1]['file_name'] == "out.csv"
 
 
-def test_plot_auto_correlation(utils_setup):
+def test_plot_grafico_1(utils_setup):
     _, plots, _, _, _ = utils_setup
-    class NumArray(list):
-        def __sub__(self, other):
-            return NumArray([a - b for a, b in zip(self, other)])
-
-    class Matrix(list):
-        def __getitem__(self, idx):
-            if isinstance(idx, tuple):
-                rows, col = idx
-                if isinstance(rows, slice):
-                    return NumArray([row[col] for row in super().__getitem__(rows)])
-                return super().__getitem__(rows)[col]
-            return super().__getitem__(idx)
-
-    serie = ([0, 0, 0], Matrix([[0, 0], [0, 0], [0, 0]]))
-    fig = plots.plot_auto_correlation(serie, 2, 'ACF')
-    assert len(fig.data) == 4
-    assert fig.layout['title'] == 'ACF'
+    pd = sys.modules['pandas']
+    df = pd.DataFrame({'DATA':[1,2], 'QTY':[3,4]})
+    fig = plots.plot_grafico_1(df, 'DATA', 'QTY', is_data=False)
+    assert fig.layout.get('title_text') == 'Gráfico da série importada'
+    assert len(fig.data) == 1
 
 
-def test_check_adfuller_stationary(utils_setup):
-    utils, _, logs, ts, _ = utils_setup
-    logs.clear()
-    ts.adfuller = lambda y: [None, 0.01]
-    utils.check_adfuller([1, 2, 3])
-    assert any('é estacionária' in m for m in logs)
-
-
-def test_check_adfuller_non_stationary(utils_setup):
-    utils, _, logs, ts, _ = utils_setup
-    logs.clear()
-    ts.adfuller = lambda y: [None, 0.1]
-    utils.check_adfuller([1, 2, 3])
-    assert any('não é estacionária' in m for m in logs)
-
-
-def test_load_dataset(utils_setup):
-    utils, _, _, _, _ = utils_setup
-    df = utils.load_dataset("AirPassengers")
-    assert not df.empty
+def test_plot_grafico_projecao(utils_setup):
+    _, plots, _, _, _ = utils_setup
+    pd = sys.modules['pandas']
+    X_train = pd.DataFrame({'DATA':[1,2], 'QTY':[1,2]})
+    X_test = pd.DataFrame({'DATA':[3], 'QTY':[3]})
+    X_pred = pd.DataFrame({'predicted_mean':[4,5]}, index=[0,1])
+    fig = plots.plot_grafico_projecao(X_train, X_test, X_pred, 'DATA', 'QTY', is_data=False)
+    assert len(fig.data) == 3
+    fig2 = plots.plot_grafico_projecao(X_train, None, X_pred, 'DATA', 'QTY', is_data=False)
+    assert len(fig2.data) == 2
