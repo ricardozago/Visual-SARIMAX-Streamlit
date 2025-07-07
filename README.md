@@ -18,6 +18,13 @@ Alguns datasets de demonstração estão disponíveis no repositório:
 
 Para utilizá‑los selecione a opção desejada na própria aplicação ou importe um arquivo CSV/XLS(X) com as colunas de data e valor da série temporal.
 
+Os arquivos de demonstração também podem ser carregados via código:
+
+```python
+from visual_sarimax import load_dataset
+df = load_dataset("AirPassengers")
+```
+
 ![Importação](https://github.com/ricardozago/Streamlit_SARIMAX/blob/main/Imagens/01%20-%20Importa%C3%A7%C3%A3o.png)
 
 Após escolher os parâmetros SARIMA (ou utilizar o `auto.arima`) visualize a projeção e os testes de diagnóstico:
