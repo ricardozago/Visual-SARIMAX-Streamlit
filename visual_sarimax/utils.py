@@ -1,13 +1,14 @@
 """Utility functions for the SARIMAX Streamlit app."""
 import streamlit as st
 import statsmodels.tsa.stattools as ts
-from pathlib import Path
+from importlib import resources
 import pandas as pd
+from typing import Any, Sequence
 
 from .plots import plot_auto_correlation
 
 
-def set_session_state():
+def set_session_state() -> None:
     """Initialize default values in Streamlit session state."""
     if "df" not in st.session_state:
         st.session_state.df = None
@@ -19,13 +20,13 @@ def set_session_state():
         st.session_state.is_data = True
 
 
-def download_dataframe(df, file_name="captura.csv"):
+def download_dataframe(df: pd.DataFrame, file_name: str = "captura.csv") -> None:
     """Render a button for downloading a dataframe as CSV."""
     csv = df.to_csv(index=False).encode("utf-8")
     st.download_button(label="Download CSV", data=csv, file_name=file_name, mime="text/csv")
 
 
-def tests_adf_autocorr(y, texto):
+def tests_adf_autocorr(y: Sequence[float], texto: str) -> None:
     """Display ADF test and autocorrelation plots."""
     statistical_tests = st.expander(texto)
     with statistical_tests:
@@ -40,7 +41,7 @@ def tests_adf_autocorr(y, texto):
         c_pacf.plotly_chart(plot_auto_correlation(pacf, 25, "PACF"), use_container_width=True)
 
 
-def param_models_text(param_models, par_ARIMA):
+def param_models_text(param_models: Any, par_ARIMA: dict[str, int]) -> None:
     """Display the selected SARIMAX parameters."""
     param_models.markdown(
         f"""
@@ -50,7 +51,7 @@ def param_models_text(param_models, par_ARIMA):
     )
 
 
-def check_adfuller(y):
+def check_adfuller(y: Sequence[float]) -> None:
     """Run augmented Dickey-Fuller test and show the result."""
     est = ts.adfuller(y)[1]
     if est <= 0.05:
@@ -61,5 +62,9 @@ def check_adfuller(y):
 
 def load_dataset(name: str) -> pd.DataFrame:
     """Return one of the bundled example datasets by name."""
-    data_dir = Path(__file__).resolve().parent / "datasets"
-    return pd.read_csv(data_dir / f"{name}.csv")
+    try:
+        file = resources.files(__package__).joinpath("datasets", f"{name}.csv")
+        return pd.read_csv(str(file))
+    except FileNotFoundError as exc:
+        raise ValueError(f"Dataset '{name}' not found") from exc
+
