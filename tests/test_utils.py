@@ -100,8 +100,8 @@ def utils_setup(monkeypatch):
     pd = types.SimpleNamespace(DataFrame=DummyDataFrame, read_csv=read_csv)
     monkeypatch.setitem(sys.modules, 'pandas', pd)
 
-    utils = importlib.import_module('utils')
-    plots = importlib.import_module('plots')
+    utils = importlib.import_module('visual_sarimax.utils')
+    plots = importlib.import_module('visual_sarimax.plots')
     importlib.reload(utils)
     importlib.reload(plots)
     return utils, plots, logs, ts, st
