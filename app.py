@@ -8,22 +8,22 @@ from statsmodels.tsa.arima.model import ARIMA
 from sklearn.metrics import mean_absolute_percentage_error
 from sklearn.metrics import mean_absolute_error
 import plotly.graph_objects as go
-import base64
+
+from utils import (
+    set_session_state,
+    download_dataframe,
+    tests_adf_autocorr,
+    param_models_text,
+    check_adfuller,
+)
+from plots import (
+    plot_auto_correlation,
+    plot_grafico_1,
+    plot_grafico_projecao,
+)
 
 
 st.set_page_config(layout="wide")
-
-
-def set_session_state():
-    # set default values
-    if "df" not in st.session_state:
-        st.session_state.df = None
-    if "nome_data" not in st.session_state:
-        st.session_state.nome_data = "DATA"
-    if "nome_qty" not in st.session_state:
-        st.session_state.nome_qty = "QTY"
-    if "is_data" not in st.session_state:
-        st.session_state.is_data = True
 
 
 def main():
@@ -594,181 +594,6 @@ def main():
             download_dataframe(df_projecao)
 
 
-def download_dataframe(df, file_name="captura.csv"):
-    """Renderiza um botão para download do dataframe como CSV."""
-    csv = df.to_csv(index=False).encode("utf-8")
-    st.download_button(
-        label="Download CSV",
-        data=csv,
-        file_name=file_name,
-        mime="text/csv",
-    )
-
-
-def tests_adf_autocorr(y, texto):
-    statistical_tests = st.expander(texto)
-    with statistical_tests:
-        # Teste de estacionariedade
-        st.markdown("***")
-        st.markdown("**Teste de estacionariedade de Dickey-Fuller Aumentado (ADF):**")
-        check_adfuller(y)
-
-        # Plota ACF e PACF
-        st.markdown("***")
-        c_acf, c_pacf = st.columns(2)
-        acf = ts.acf(y, nlags=min(int(y.shape[0] / 2 - 1), 25), alpha=0.05)
-        c_acf.plotly_chart(
-            plot_auto_correlation(acf, 25, "ACF"), use_container_width=True
-        )
-        pacf = ts.pacf(y, nlags=min(int(y.shape[0] / 2 - 1), 25), alpha=0.05)
-        c_pacf.plotly_chart(
-            plot_auto_correlation(pacf, 25, "PACF"), use_container_width=True
-        )
-
-
-def param_models_text(param_models, par_ARIMA):
-    param_models.markdown(
-        f"""
-    Modelo sendo utilizado (notação $(p, d, q)x(P, D, Q, s)$):
-    $({par_ARIMA["p"]}, {par_ARIMA["d"]}, {par_ARIMA["q"]})x({par_ARIMA["P"]}, {par_ARIMA["D"]}, {par_ARIMA["Q"]}, {par_ARIMA["n"]})$
-    """
-    )
-
-
-def check_adfuller(y):
-    est = ts.adfuller(y)[1]
-    if est <= 0.05:
-        st.markdown("👍 A série **é estacionária** com p-valor de : {:0.4f}".format(est))
-    else:
-        st.markdown(
-            "👎 A série **não é estacionária** com p-valor de : {:0.4f}".format(est)
-        )
-
-
-@st.cache_data
-def plot_auto_correlation(serie, n, versao):
-    x = list(range(0, n + 1))
-    y = serie[0]
-    y_upper = serie[1][:, 1] - y
-    y_lower = serie[1][:, 0] - y
-
-    fig = go.Figure(
-        [
-            go.Scatter(x=x, y=y, line_color="red", mode="markers"),
-            go.Bar(x=x, y=y, width=0.1),
-            go.Scatter(
-                x=x, y=y_lower, fill="tonexty", mode="none", line_color="indigo"
-            ),
-            go.Scatter(
-                x=x, y=y_upper, fill="tonexty", mode="none", line_color="indigo"
-            ),
-        ]
-    )
-    fig.update_layout(
-        showlegend=False,
-        title=versao,
-        xaxis_title="Lags",
-        yaxis_title="Corr",
-        width=500,
-        height=400,
-    )
-    return fig
-
-
-@st.cache_data
-def plot_grafico_1(df, nome_data, nome_qty, is_data=True):
-    # Based in: https://plotly.com/python/range-slider/
-
-    # Create figure
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=list(df[nome_data]), y=list(df[nome_qty])))
-
-    # Set title
-    fig.update_layout(
-        title_text="Gráfico da série importada",
-        width=1200,
-        height=400,
-    )
-
-    # Add range slider
-    if is_data:
-        fig.update_layout(
-            xaxis=dict(
-                rangeselector=dict(
-                    buttons=list(
-                        [
-                            dict(
-                                count=1, label="1m", step="month", stepmode="backward"
-                            ),
-                            dict(
-                                count=6, label="6m", step="month", stepmode="backward"
-                            ),
-                            dict(count=1, label="YTD", step="year", stepmode="todate"),
-                            dict(count=1, label="1y", step="year", stepmode="backward"),
-                            dict(step="all"),
-                        ]
-                    )
-                ),
-                rangeslider=dict(visible=True),
-                type="date",
-            )
-        )
-    return fig
-
-
-def plot_grafico_projecao(X_train, X_test, X_pred, nome_data, nome_qty, is_data=True):
-    fig = go.Figure()
-    X_train = X_train.reset_index()
-    X_pred = X_pred.reset_index()
-    fig.add_trace(
-        go.Scatter(
-            x=list(X_train[nome_data]),
-            y=list(X_train[nome_qty]),
-            name="Conjunto Treinamento",
-        )
-    )
-
-    if X_test is not None:
-        X_test = X_test.reset_index()
-        fig.add_trace(
-            go.Scatter(
-                x=list(X_test[nome_data]),
-                y=list(X_test[nome_qty]),
-                name="Conjunto Teste",
-            )
-        )
-
-    fig.add_trace(
-        go.Scatter(x=X_pred["index"], y=X_pred["predicted_mean"], name="Projeção")
-    )
-
-    fig.update_layout(
-        title_text="Gráfico Observações e Projeção", width=1200, height=400
-    )
-
-    if is_data:
-        fig.update_layout(
-            xaxis=dict(
-                rangeselector=dict(
-                    buttons=list(
-                        [
-                            dict(
-                                count=1, label="1m", step="month", stepmode="backward"
-                            ),
-                            dict(
-                                count=6, label="6m", step="month", stepmode="backward"
-                            ),
-                            dict(count=1, label="YTD", step="year", stepmode="todate"),
-                            dict(count=1, label="1y", step="year", stepmode="backward"),
-                            dict(step="all"),
-                        ]
-                    )
-                ),
-                rangeslider=dict(visible=True),
-                type="date",
-            )
-        )
-    return fig
 
 
 if __name__ == "__main__":
